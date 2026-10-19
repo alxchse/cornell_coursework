@@ -1,0 +1,343 @@
+% L1b takeaway deck.
+%
+% THE DECK MIRRORS THE NOTEBOOK. The instructor shows
+% CHEME-5660-L1b-Lecture-TimeValueMoney-Fall-2026.ipynb while students follow
+% along and take notes on these slides. The deck therefore covers the same
+% material in the same order, with frame titles matching notebook headings.
+% Adding a section to the notebook means adding a slide here.
+%
+% Notebook outline as of this writing, and where each part lands:
+%
+%   (deck only)                          -> title
+%   Disclaimer and Risks       [cell 8]  -> slide 2   (always near the front)
+%   Learning Objectives        [cell 0]  -> Objectives for Today
+%   Time Value of Money        [cell 1]  -> Time Value of Money
+%   Discrete Compounding       [cell 2]  -> Discrete Compounding
+%   Continuous Compounding     [cell 3]  -> Continuous Compounding
+%   Who Sets the Valuation Rate[cell 4]  -> Who Sets the Valuation Rate? + What Rate Should I Use?
+%   Abstract Assets            [cell 5]  -> An Abstract Asset (figure) + Net Cash Flows
+%   Net Present Value (NPV)    [cell 6]  -> Net Present Value + Reading the Sign of NPV
+%   Summary                    [cell 7]  -> Summary
+%
+% The lecture notebook carries no "Setup, Data, and Prerequisites" section and no
+% code cells: L1b's code lives in the companion worked example and the optional
+% derivation. There is nothing to skip, so the deck covers cells 0-8 in order,
+% with cell 8 (the disclaimer) pulled to the front.
+%
+% Optional notebooks get NO frame of their own in this deck: the optional
+% derivation, CHEME-5660-L1b-Derivation-Discrete-Continuous-Compounding-Fall-
+% 2026.ipynb, is listed under "Optional:" on the Lectures and Examples frame and
+% nowhere else. L3a/L3b/L4a carry an "Optional Advanced Material" frame instead;
+% L1b deliberately does not.
+%
+% The 2024 decks opened with a "2-minute rapid review" transition frame. That is
+% a holdover: it belongs to a concept-review notebook section, and L1b has none,
+% so it is not used here. \transitionframe is still in vnslides.sty for decks
+% whose notebook does open that way.
+\documentclass[aspectratio=169,11pt]{beamer}
+\usepackage{vnslides}
+
+\title{{\vnheavy L1b}: Time Value of Money, Abstract Assets, and Net Present Value}
+\subtitle{CHEME 5660 Cornell University}
+\author{Copyright Jeffrey Varner 2026. All Rights Reserved}
+
+\begin{document}
+
+% ---- title ---------------------------------------------------
+\vntitlepage
+
+% ---- disclaimer ----------------------------------------------
+\begin{frame}{Disclaimer and Risks}
+  \vspace{0.6em}
+  \textbf{\ink{Training only.}} This content is for training and informational
+  purposes only. The teaching team does not make, give, or endorse any offer or
+  solicitation to buy or sell securities or derivative products, or provide
+  investment or trading advice or strategy.
+
+  \vspace{1.1em}
+  \textbf{\ink{Risk.}} Trading involves risk and is generally not recommended for
+  those with limited resources, experience, or a low risk tolerance. Past
+  performance does not guarantee future success.
+
+  \vspace{1.1em}
+  \textbf{\ink{Responsibility.}} You are responsible for your investment decisions
+  based on your financial circumstances, objectives, risk tolerance, and
+  liquidity needs.
+\end{frame}
+
+% ---- objectives ----------------------------------------------
+\begin{frame}{Objectives for Today}
+  \vspace{0.4em}
+  Today we compare \hilite{cash flows at different dates}, derive accumulation
+  and discount factors, and use them to value an \hilite{abstract asset}.
+
+  \vspace{0.9em}
+  \decklabel{Today's concepts}
+  \vspace{0.4em}
+  \begin{itemize}\setlength{\itemsep}{0.5em}
+    \item \hilite{The time value of money}: cash flows at different dates cannot
+      be combined until they are expressed at the same valuation date.
+    \item \hilite{An abstract asset}: a sequence of dated signed cash flows. The
+      same representation covers a bond, a stock, a factory, or a car.
+    \item \hilite{Net present value}: discount each signed cash flow to a common
+      valuation date, then add. The sign of the NPV is a measure of the attractiveness of an abstract asset relative to a declared discount rate.
+  \end{itemize}
+  \vspace{-0.4em}
+
+\end{frame}
+
+% ---- examples ------------------------------------------------
+\begin{frame}{Lectures and Examples}
+  \vspace{0.25em}
+  {\normalsize\textbf{\ink{Lecture:}}\par
+  \dimmed{CHEME-5660-L1b-Lecture-TimeValueMoney-Fall-2026.ipynb}}
+
+  \vspace{0.8em}
+  {\normalsize\textbf{\ink{Example:}}\par
+  \dimmed{CHEME-5660-L1b-NetPresentValue-Fall-2026-WorkedExample.ipynb}}
+
+  \vspace{0.5em}
+  Represent ten years of Tesla Model S ownership as dated cash flows, discount
+  them to time $0$, and compute their NPV.
+
+  \vspace{0.8em}
+  {\normalsize\textbf{\ink{Optional:}}\par
+  \dimmed{CHEME-5660-L1b-Derivation-Discrete-Continuous-Compounding-Fall-2026.ipynb}}
+
+  \vspace{0.5em}
+  Measure how far discrete compounding falls short of the fixed-rate continuous
+  limit, and when the estimate of that gap can be trusted.
+
+  \slidenote{Link:}{\href{https://github.com/varnerlab/CHEME-5660-CourseRepository-Fall-2026.git}{https://github.com/varnerlab/CHEME-5660-CourseRepository-Fall-2026.git}}
+\end{frame}
+
+% ---- TVM -----------------------------------------------------
+\begin{frame}{Time Value of Money}
+  A dollar today and a dollar at a future date are \hilite{not comparable}. We must express both on a common
+  valuation date using a conversion rule.
+
+  \vspace{0.5em}
+  Let $P$ be an amount held at time $0$, and let $y$ be a quoted
+  \textbf{\ink{nominal annual yield}} used for valuation. With one (discrete) compounding
+  period per year, the amount after one year is given by:
+  \[
+    F_1=\underbrace{(1+y)}_{\mathcal D_{1,0}(y;1)}P .
+  \]
+
+  For $y>0$ the factor $\mathcal D_{1,0}(y;1)>1$ (called the \textbf{\ink{accumulation factor}}) moves time-0 dollars forward in time.
+  It's inverse, $\mathcal D_{1,0}^{-1}(y;1)<1$ (called the \textbf{\ink{discount factor}}) moves future dollars back in time.
+
+  \slidenote{Careful:}{a later dollar is not \emph{automatically} worth less. That depends on the rate $y$ you declare.}
+\end{frame}
+
+% ---- math: accumulation --------------------------------------
+\begin{frame}{Discrete Compounding}
+  Let $j=0,1,2,\ldots$ index the \textbf{\ink{compounding periods}}, let
+  $i_\ell>-1$ be the \mbox{\hilite{effective periodic interest rate}} over
+  $\ell\rightarrow\ell+1$, and collect these as $\mathbf i=(i_0,\ldots,i_{j-1})$,
+  empty at $j=0$. An amount $P$ at time $0$ becomes $F_j$ at period $j$:
+  \vspace{-0.3em}
+  \[
+    F_j=\underbrace{\left[\prod_{\ell=0}^{j-1}(1+i_\ell)\right]}_{\mathcal D_{j,0}(\mathbf i)}P ,
+    \qquad \text{\footnotesize empty product} = 1 .
+  \]
+  \vspace{-0.55em}
+
+  For a nominal annual yield $y$ compounded $n$ times per year, every
+  $i_\ell=y/n$:
+  \vspace{-0.3em}
+  \[
+    \underbrace{\mathcal D_{j,0}(y;n)=\left(1+\frac{y}{n}\right)^{j}}_{\text{\footnotesize accumulation}},
+    \qquad
+    \underbrace{\mathcal D_{j,0}^{-1}(y;n)=\left(1+\frac{y}{n}\right)^{-j}}_{\text{\footnotesize discount}}.
+  \]
+
+  \vspace{0.05em}
+  {\small \hilite{Assumes}: constant $y/n$, end-of-period compounding,
+  reinvested interest, $1+y/n>0$.}
+
+  \slidenote{Careful:}{a flat $y$ is an \emph{assumption}. In L2b, one security's yield gives way to a curve of spot rates.}
+\end{frame}
+
+% ---- math: continuous ----------------------------------------
+\begin{frame}{Continuous Compounding}
+  Let $g(t)$ be a \hilite{continuously compounded growth rate}, carrying units of
+  inverse time, and let $T$ be the horizon in years. Over $0\rightarrow T$:
+  \vspace{-0.2em}
+  \[
+    \mathcal D_{T,0}(g)=\exp\left(\int_0^T g(u)\,du\right),
+    \qquad
+    \mathcal D_{T,0}^{-1}(g)=\exp\left(-\int_0^T g(u)\,du\right),
+  \]
+  \vspace{-0.6em}
+
+  which for \hilite{constant} $g$ collapses to:
+  \vspace{-0.2em}
+  \[
+    \underbrace{\mathcal D_{T,0}(g)=e^{gT}}_{\text{\footnotesize accumulation}},
+    \qquad
+    \underbrace{\mathcal D_{T,0}^{-1}(g)=e^{-gT}}_{\text{\footnotesize discount}}.
+  \]
+
+  A nominal annual yield $y$ compounded $n$ times per year fits this form.
+  Setting $g=g_y$ with $g_y:=n\log\left(1+y/n\right)$ makes
+  $\left(1+y/n\right)^{nT}=e^{g_yT}$ hold exactly at every finite $n$: $y$ and
+  its continuous equivalent $g_y$ are
+  \textbf{\ink{two representations of one accumulation rule}}.
+
+  \slidenote{Careful:}{at finite $n$, $y\neq g_y$, so $y$ does not belong in $e^{yT}$. Only as $n\rightarrow\infty$ does $g_y\rightarrow y$.}
+\end{frame}
+
+% ---- who sets the rate ---------------------------------------
+\begin{frame}{Who Sets the Valuation Rate?}
+  The valuation rate is \hilite{not universal}. It depends on the cash flow, market
+  convention, horizon, and the risks being modeled: no single policy rate prices
+  every asset.
+
+  \vspace{0.5em}
+  \eyebrow{The Federal Reserve}
+  \vspace{0.25em}
+  \begin{itemize}\setlength{\itemsep}{0.4em}
+    \item The Fed conducts \textbf{\ink{monetary policy}} for maximum employment,
+      stable prices, and moderate long-term rates, \textbf{\ink{supervises
+      banks}}, and is the \textbf{\ink{lender of last resort}}.
+    \item The Federal Open Market Committee (\textbf{\ink{FOMC}}) sets a target range for the federal funds rate, the
+      overnight rate on unsecured reserve balances traded between eligible
+      institutions. 
+    \item Other market rates, e.g., Treasury yields and mortgage rates, respond to
+      policy and market conditions, but are \textbf{\ink{not mechanically pegged}}
+      to the federal funds rate.
+  \end{itemize}
+
+  \slidenote{Link:}{\href{https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm}{FOMC calendar and meeting materials}}
+\end{frame}
+
+\begin{frame}{What Valuation Rate Should I Use?}
+  There is no universal answer: $y$ is a \hilite{declared model input}, matched
+  to the cash flow by currency, horizon, and any stated adjustment for credit,
+  liquidity, or risk.
+
+  \vspace{0.45em}
+  \begin{center}\footnotesize
+  \begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.24\textwidth}c>{\raggedright\arraybackslash}p{0.53\textwidth}@{}}
+    \toprule
+    \textbf{\ink{Term}} & \textbf{\ink{Symbol}} & \textbf{\ink{Meaning here}}\\[1pt]
+    \midrule
+    \textbf{\ink{Interest rate}} & $i_\ell$ & A rate paid or received for
+      borrowing or lending, such as the federal funds rate or a mortgage rate.
+      Those are annual quotes; the model uses $i_\ell=y/n$ per period.\\
+    \addlinespace[4pt]
+    \textbf{\ink{Yield}} & $y$ & A rate tied to the price and cash flows of an
+      investment, such as a bond yield.\\
+    \addlinespace[4pt]
+    \textbf{\ink{Discount rate}} or \textbf{\ink{valuation rate}} & $y$ & The rate
+      a model uses to convert future cash flows to present value.\\
+    \addlinespace[4pt]
+    \textbf{\ink{Continuous equivalent}} & $g_y$ & The same rate written in
+      continuous form, $g_y=n\log\left(1+y/n\right)$.\\[1pt]
+    \bottomrule
+  \end{tabular}
+  \end{center}
+
+  \slidenote{Careful:}{the same $y$ fills rows 2 and 3: one number, two roles. From L2a, $g$ is an asset's own measured growth rate.}
+\end{frame}
+
+% ---- figure --------------------------------------------------
+\begin{frame}{An Abstract Asset}
+  \vspace{0.2em}
+  \begin{center}
+    \resizebox{\textwidth}{!}{\input{../figs/abstract-asset-timeline.tex}}
+  \end{center}
+\end{frame}
+
+% ---- net cash flows ------------------------------------------
+\begin{frame}{Net Cash Flows}
+  An abstract asset is a \textbf{\ink{sequence of dated cash flows}} in one
+  currency, one at each compounding date $j=0,1,\ldots,N$, so $N$ is the final
+  index and there are $N+1$ dates. At date $j$, let
+  $\mathbf c_j\in\mathbb R_{\geq0}^{m_j}$ hold the $m_j$
+  nonnegative cash flow magnitudes and $\symbf{\nu}_j\in\{-1,+1\}^{m_j}$ their directions,
+  $+1$ an inflow and $-1$ an outflow. The \hilite{signed net cash flow} is their
+  inner product:
+  \[
+    \bar c_j=\left\langle\mathbf c_j,\symbf{\nu}_j\right\rangle
+    =\sum_{k=1}^{m_j}c_{j,k}\,\nu_{j,k}.
+  \]
+
+  The undiscounted total $\sum_{j=0}^{N}\bar c_j$ is \textbf{\ink{not}} a time-0
+  value: its terms are dollars from different dates.
+
+  \slidenote{Next:}{discount every term to a common date, and the result is net present value.}
+\end{frame}
+
+% ---- math: NPV -----------------------------------------------
+\begin{frame}{Net Present Value}
+  \vspace{0.2em}
+  Take a nominal annual yield $y$ compounded $n$ times per year as the declared
+  valuation rate. Discount every signed net cash flow $\bar c_j$ to the valuation
+  date with $\mathcal D_{j,0}^{-1}(y;n)$, \hilite{then add}. The net present value
+  at time $0$ is given by:
+  \[
+    \operatorname{NPV}_0(y)=\sum_{j=0}^{N}\mathcal D_{j,0}^{-1}(y;n)\,\bar c_j
+    =\underbrace{\left\langle \mathcal D_{\star,0}^{-1}(y;n),\ \bar{\mathbf c}\right\rangle}_{\text{\footnotesize time-0 dollars}} .
+  \]
+
+  \vspace{0.2em}
+  The $\star$ runs over every cash-flow index, so $\mathcal D_{\star,0}^{-1}(y;n)$
+  and $\bar{\mathbf c}$ are ordered $(N+1)$-vectors and NPV is a single scalar
+  product, which is exactly how we compute it in code.
+
+  \slidenote{Worked example:}{ten years of Model S ownership, $\operatorname{NPV}_0\approx-\$121{,}484$}
+\end{frame}
+
+% ---- NPV meaning ---------------------------------------------
+\begin{frame}{Reading the Sign of NPV}
+  \vspace{0.2em}
+  The sign of $\operatorname{NPV}_0(y)$ compares the modeled cash flows against
+  the \hilite{rate you declared}. It is a valuation statement, not a promise of
+  accounting profit or realized return.
+
+  \vspace{0.6em}
+  \begin{itemize}\setlength{\itemsep}{0.45em}
+    \item \textbf{\ink{Positive}}: in time-0 dollars, receipts exceed payments,
+      so at the declared $y$ the asset is worth more than its price.
+    \item \textbf{\ink{Negative}}: receipts fall short of payments, so at the
+      declared $y$ the asset is worth less than its price.
+    \item \textbf{\ink{Zero}}: receipts and payments agree, so the asset is worth
+      exactly its price. This is how L2a prices Treasury bills, notes, and bonds.
+  \end{itemize}
+
+  \vspace{0.6em}
+  Change $y$ and the sign can change: it describes this cash-flow model at this
+  rate, not the asset in general.
+
+  \slidenote{Careful:}{a positive NPV is not a claim that an asset is risk-free or universally attractive.}
+\end{frame}
+
+% ---- summary -------------------------------------------------
+% Summary frames follow the notebook's Summary cell: one summary sentence, the
+% three key takeaways, one concluding sentence. See vnslides.sty rule 7.
+\begin{frame}{Summary}
+  This lecture introduced time-value-of-money calculations and the
+  representation of investments as dated cash flows.
+
+  \vspace{0.6em}
+  \decklabel{Key takeaways}
+  \vspace{0.25em}
+  \begin{itemize}\setlength{\itemsep}{0.45em}
+    \item \textbf{\ink{Dated dollars must be compared at a common valuation date.}}
+      A forward accumulation factor carries value forward and its inverse
+      discounts it back, so cash flows can be added only once they share a date.
+    \item \textbf{\ink{Rate conventions must be stated.}} A nominal yield quoted
+      with a compounding frequency and its continuously compounded equivalent
+      describe one accumulation rule, so the convention travels with the number.
+    \item \textbf{\ink{NPV values an asset relative to a declared rate.}} The sign
+      of the result is a statement about the cash-flow model and the discount
+      rate you declared.
+  \end{itemize}
+
+  \vspace{0.6em}
+  These ideas provide the valuation framework used throughout the course.
+\end{frame}
+
+\end{document}

@@ -1,0 +1,10 @@
+# The reference solution stays out of the public repository until the phased
+# solution release. Remove this line (and commit solution/) at release time.
+solution/
+
+# Per-student artifacts
+MANIFEST.txt
+*.zip
+
+# OS noise
+.DS_Store

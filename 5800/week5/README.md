@@ -1,0 +1,60 @@
+# CHEME 4800/5800 Fall 2026: Week 05
+
+Maximum flow and linear programming
+
+This is the student bundle for release `week-05.1`. Start from this directory, which
+contains the pinned Julia environment used by every included notebook.
+
+This release contains the class meeting folder(s) `L5a`, `L5b`. The remaining meetings of this week will arrive as `week-05.2`, `week-05.3`. Each release contains everything in the earlier ones, so always download the most recent release for the week.
+
+## Before you open a notebook
+
+1. Extract this ZIP completely and keep the extracted folder somewhere you can
+   edit it. Do not run notebooks from inside the ZIP.
+2. Install Julia 1.12 with
+   [`juliaup`](https://github.com/JuliaLang/juliaup), then check that
+   `julia --version` reports a `1.12` release.
+3. Install [VS Code](https://code.visualstudio.com/download). In its Extensions
+   view (`Ctrl+Shift+X` on Windows/Linux or `Cmd+Shift+X` on macOS), install both
+   [**Julia** by julialang](https://marketplace.visualstudio.com/items?itemName=julialang.language-julia)
+   (`julialang.language-julia`) and
+   [**Jupyter** by Microsoft](https://marketplace.visualstudio.com/items?itemName=ms-toolsai.jupyter)
+   (`ms-toolsai.jupyter`). Reload VS Code if prompted.
+4. In VS Code, choose **File > Open Folder** and select this top-level extracted
+   folder—not an individual meeting folder or notebook. You have the correct folder
+   when `Project.toml`, `Manifest.toml`, `README.md`, and `weeks/` are visible in
+   the Explorer sidebar.
+5. Choose **Terminal > New Terminal** and run:
+
+   ```bash
+   julia --project=. -e 'using Pkg; Pkg.instantiate()'
+   julia --project=. -e 'using VLDataScienceMachineLearningPackage; println("SETUP-OK")'
+   ```
+
+The first command may spend several minutes downloading and precompiling packages
+on a new machine. Let it finish; later starts are much faster. `SETUP-OK` confirms
+that the course environment is ready.
+
+## Run a notebook
+
+1. Open the [Week 05 guide](weeks/week-05/README.md) and choose the notebook for the class
+   meeting. You can find it in the VS Code Explorer under `weeks/week-05`.
+2. Open the `.ipynb` file. Click **Select Kernel** in the upper-right corner and
+   choose **Julia 1.12**.
+3. Run the first code cell, which loads the meeting's `Include.jl`, and then run
+   the remaining cells in order with the cell run button or `Shift+Enter`.
+
+A tan or yellow package-precompilation notice is informational, not a failure. If
+**Julia 1.12** does not appear in the kernel picker, confirm that both VS Code
+extensions are enabled, rerun the setup commands, and restart VS Code. If the
+notebook has no run buttons, the Jupyter extension is missing or disabled. If a
+package cannot be loaded, confirm that the VS Code terminal is in the top-level
+folder containing `Project.toml` and repeat the setup commands. Bring the exact
+error message to office hours if the problem continues.
+
+## Lab reference solutions
+
+Labs with a student `src/Compute.jl` file include the reference implementation
+as `src/Compute-solution.jl`. Open the two files side by side
+to compare your implementation with the reference. The notebook loads the student
+file by default; the solution file does not replace your work.

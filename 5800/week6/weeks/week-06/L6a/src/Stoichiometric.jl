@@ -1,0 +1,261 @@
+# -- PRIVATE API BELOW HERE --------------------------------------------------------------------------------------- #
+"""
+    _extract_species_dictionary(reaction_phrase::String; direction::Float64=-1.0)
+
+Parse one side of a VFF reaction phrase (reactants or products) into a
+species-to-stoichiometric-coefficient dictionary.
+Handles optional coefficients written as `coeff*species`, adds repeated species
+terms, and skips the surroundings (`∅` or `[]`). Coefficients default to one;
+malformed numeric coefficients raise a parsing error. The input is not modified.
+
+### Arguments
+- `reaction_phrase::String`: one side of a VFF reaction string (e.g., `"1.0*A+2.0*B"`).
+- `direction::Float64`: sign applied to all coefficients. Use `-1.0` for reactants, `1.0` for products.
+
+### Returns
+- `Dict{String,Float64}`: mapping from species symbol to signed stoichiometric coefficient.
+"""
+function _extract_species_dictionary(reaction_phrase::String;
+	direction::Float64 = -1.0)::Dict{String,Float64}
+
+	# initialize -
+	species_symbol_dictionary = Dict{String,Float64}()
+	
+	# Split the reaction side into species terms -
+	component_array = split(reaction_phrase,'+');
+	for component ∈ component_array
+
+		if (contains(component,'*') == true)
+			
+			tmp_array = split(component,'*')
+			st_coeff = direction*parse(Float64,tmp_array[1])
+			species_symbol = strip(String(tmp_array[2]))
+
+			# Exclude surroundings from the species balances -
+			if (species_symbol != "∅" && species_symbol != "[]")
+				species_symbol_dictionary[species_symbol] = get(species_symbol_dictionary, species_symbol, 0.0) + st_coeff
+			end
+		else 
+			
+			# strip any spaces -
+			species_symbol = component |> lstrip |> rstrip
+
+			# Exclude surroundings from the species balances -
+			if (species_symbol != "∅" && species_symbol != "[]")
+				species_symbol_dictionary[species_symbol] = get(species_symbol_dictionary, species_symbol, 0.0) + direction
+			end
+		end
+	end
+
+	# return -
+	return species_symbol_dictionary
+end
+
+"""
+    _expand_reversible_reactions(reaction_array::Array{String,1}) -> Vector{String}
+
+Split each reversible VFF reaction into two irreversible reactions:
+a forward reaction prefixed with `F` and a reverse reaction prefixed with `R`.
+Irreversible reactions are passed through unchanged. The input array is not
+modified. Generated names must remain unique; naming collisions are not checked.
+
+### Arguments
+- `reaction_array::Array{String,1}`: an array of VFF reaction strings.
+
+### Returns
+- `Array{String,1}`: an expanded array where each reversible reaction is replaced by its forward and reverse counterparts.
+"""
+function _expand_reversible_reactions(reaction_array::Array{String,1})::Array{String,1}
+
+    # initialize -
+    processed_reaction_string_array = Array{String,1}()
+
+    # main loop -
+    for reaction_string ∈ reaction_array
+        
+        # chop up the reaction string -
+	    reaction_component_array = split(reaction_string,',');
+
+        # get components -
+        rname = reaction_component_array[1]
+        forward_phrase = reaction_component_array[2]
+        reverse_phrase = reaction_component_array[3]
+        is_reversible = parse(Bool, reaction_component_array[4])
+    
+        if (is_reversible == true)
+
+            # build new reaction strings (forward, and reverse)
+            new_string_forward = "F$(rname),$(forward_phrase),$(reverse_phrase),false"
+            new_string_reverse = "R$(rname),$(reverse_phrase),$(forward_phrase),false"
+            push!(processed_reaction_string_array,new_string_forward)
+            push!(processed_reaction_string_array,new_string_reverse)
+        else
+            push!(processed_reaction_string_array, reaction_string)
+        end
+    end
+
+    # return -
+    return processed_reaction_string_array
+end
+# -- PRIVATE API ABOVE HERE --------------------------------------------------------------------------------------- #
+
+
+# -- PUBLIC API BELOW HERE ---------------------------------------------------------------------------------------- #
+"""
+    build_stoichiometric_matrix(reactions::Array{String,1}; expand::Bool=false)
+
+Build net stoichiometry from VFF records `name,reactants,products,is_reversible`.
+Use unique reaction names, `+` between species, `coefficient*species` for explicit
+coefficients, and `[]` or `∅` for surroundings. Reactant coefficients are negative;
+product coefficients are positive. Repeated terms and species on both sides
+are summed. Coefficients express stoichiometric amounts, not reaction rates.
+
+### Arguments
+- `reactions`: reaction records in the desired column order; not modified.
+- `expand`: if true, replace each reversible record with forward/reverse records
+  named `Fname` and `Rname`, in that order. Otherwise retain one signed-flux column
+  per record; reversibility must be imposed separately through flux bounds.
+
+### Returns
+Return `(S, species, names, equations)`:
+- `S::Matrix{Float64}`: species × reactions matrix of net coefficients.
+- `species::Vector{String}`: alphabetically sorted row labels, excluding surroundings.
+- `names::Vector{String}`: column labels in input order, or expanded input order.
+- `equations::Dict{String,String}`: reaction names mapped to display equations.
+  The display separator `=` does not specify the allowed flux direction.
+
+Malformed records raise indexing or parsing errors. When expanding reactions,
+construct bounds from the same expanded records so the columns remain aligned.
+"""
+function build_stoichiometric_matrix(reactions::Array{String,1}; 
+    expand::Bool=false)::Tuple{Array{Float64,2}, Array{String,1}, Array{String,1}, Dict{String,String}}
+
+	# initialize -
+	species_array = Array{String,1}()
+	reaction_array = Array{String,1}()
+	reaction_dictionary_array = Array{Dict{String,Float64},1}()
+
+    # should we expand the reversible reactions?
+    reactions_to_process = reactions;
+    if (expand == true)
+        reactions_to_process = _expand_reversible_reactions(reactions);
+    end
+	
+	# first: let's discover the species list -
+	for reaction_string ∈ reactions_to_process
+
+		# initialize tmp storage -
+		tmp_dictionary = Dict{String,Float64}()
+		
+		# split the reaction into its components -
+		component_array = split(reaction_string,',');
+
+		# reaction name -
+		reaction_name = String.(component_array[1]);
+		push!(reaction_array, reaction_name);
+		
+		# reactant phrase => 2, and product phrase => 3
+		reactant_phrase = String.(component_array[2]);
+		product_phrase = String.(component_array[3]);
+
+		# Add signed coefficients; shared species contribute their net change -
+		mergewith!(+, tmp_dictionary, _extract_species_dictionary(reactant_phrase; direction = -1.0))
+		mergewith!(+, tmp_dictionary, _extract_species_dictionary(product_phrase; direction = 1.0))
+
+		# grab the tmp_dictionary for later -
+		push!(reaction_dictionary_array, tmp_dictionary)
+
+		# the species that we need to look at are the keys of the tmp_dictionary -
+		tmp_species_list = keys(tmp_dictionary)
+		
+		# we need a unique species list, so check to see if we have already discovered this species -
+		for tmp_species ∈ tmp_species_list
+
+			if (in(tmp_species, species_array) == false)
+
+				# ok, we have *not* seen this species before, let's grab it -
+				push!(species_array, tmp_species)
+			end
+		end
+	end
+
+	# sort alphabetically -
+	sort!(species_array)
+	
+	# we have a *unique* species array, let's initialize some storage for the stoichiometric array
+	S = zeros(length(species_array), length(reactions_to_process));
+
+	# last: fill in the values for stoichiometric coefficents -
+	for (row_index, species_symbol) ∈ enumerate(species_array)
+		for (col_index, reaction_dictionary) ∈ enumerate(reaction_dictionary_array)
+
+			# ok: is this species symbol in my reaction dictionary?
+			if (haskey(reaction_dictionary, species_symbol) == true)
+				S[row_index,col_index] = reaction_dictionary[species_symbol]
+			end
+		end
+	end
+
+	# update the reaction array
+	tmp_reaction_dictionary = Dict{String,String}()
+	for i ∈	eachindex(reactions_to_process)
+		tmpreactionstring = reactions_to_process[i];
+
+		# split the reaction into its components -
+		component_array = split(tmpreactionstring,',');
+		name = component_array[1];
+		reactants = component_array[2];
+		products = component_array[3];
+		tmpstring = "$(reactants) = $(products)";
+		
+		# split the reaction string -
+		tmp_reaction_dictionary[name] = tmpstring;
+	end
+
+	# return -
+	return (S, species_array, reaction_array, tmp_reaction_dictionary)
+end
+
+"""
+
+	build_default_bounds_array(reactions::Array{String,1}; defaultbound::Float64 = 1000.0) -> Array{Float64,2}
+
+Build a default bounds array for the VFF reaction records. 
+If the reaction is reversible, the bounds are [-defaultbound, defaultbound].
+If the reaction is irreversible, the bounds are [0.0, defaultbound].
+
+### Arguments
+- `reactions::Array{String,1}`: an array of VFF reaction strings.
+- `defaultbound::Float64=1000.0`: nonnegative bound magnitude, in the chosen
+  flux units (mmol/gDW/h in the urea example). Units and sign are not checked.
+
+### Returns
+- `Array{Float64,2}`: `length(reactions) × 2` array in record order;
+  column 1 is the lower bound and column 2 the upper bound. The input is unchanged.
+  Reversible means signed flux in either direction relative to the written arrow.
+"""
+function build_default_bounds_array(reactions::Array{String,1}; defaultbound::Float64 = 1000.0)::Array{Float64,2}
+
+	# initialize -
+	fluxbounds = zeros(length(reactions),2);
+
+	# main loop -
+	for (index, reaction) ∈ enumerate(reactions)
+		
+		# split the reaction string -
+		component_array = split(reaction,',');
+		isreversible = parse(Bool, component_array[end]);
+		
+		if (isreversible == true)
+			fluxbounds[index,1] = -defaultbound;
+			fluxbounds[index,2] = defaultbound;
+		else
+			fluxbounds[index,1] = 0.0;
+			fluxbounds[index,2] = defaultbound;
+		end
+	end
+
+	# return -
+	return fluxbounds
+end
+# -- PUBLIC API ABOVE HERE ---------------------------------------------------------------------------------------- #

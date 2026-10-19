@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="760" viewBox="0 0 1600 760">
+  <defs>
+    <marker id="arrow-coral" markerWidth="26" markerHeight="20" refX="0" refY="10" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L26,10 L0,20 Z" fill="#D9574F"/>
+    </marker>
+    <marker id="arrow-blue" markerWidth="26" markerHeight="20" refX="0" refY="10" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L26,10 L0,20 Z" fill="#247BA5"/>
+    </marker>
+  </defs>
+
+  <g font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-weight="400" text-anchor="middle">
+    <!-- Order flow: matched baselines, restrained colors, and equal arrow spacing. -->
+    <text x="220" y="108" font-size="64" fill="#D9574F">Buyers</text>
+    <text x="220" y="165" font-size="34" fill="#657078">submit buy orders</text>
+    <line x1="405" y1="120" x2="488" y2="120" stroke="#D9574F" stroke-width="4" marker-end="url(#arrow-coral)"/>
+
+    <rect x="540" y="20" width="520" height="200" rx="8" fill="#F6F7F8" stroke="#D5DADF" stroke-width="1.5"/>
+    <text x="800" y="108" font-size="60" fill="#29343C">Exchange</text>
+    <text x="800" y="165" font-size="34" fill="#657078">ranks and matches orders</text>
+
+    <line x1="1195" y1="120" x2="1112" y2="120" stroke="#247BA5" stroke-width="4" marker-end="url(#arrow-blue)"/>
+    <text x="1380" y="108" font-size="64" fill="#247BA5">Sellers</text>
+    <text x="1380" y="165" font-size="34" fill="#657078">submit sell orders</text>
+
+    <!-- The section label sits within a quiet divider above the three quote columns. -->
+    <line x1="260" y1="270" x2="657" y2="270" stroke="#DBDFE3" stroke-width="1.5"/>
+    <text x="800" y="279" font-size="25" letter-spacing="2.5" fill="#657078">TOP OF BOOK</text>
+    <line x1="943" y1="270" x2="1340" y2="270" stroke="#DBDFE3" stroke-width="1.5"/>
+
+    <text x="475" y="347" font-size="27" letter-spacing="2" fill="#C84E47">BEST BID</text>
+    <text x="475" y="420" font-size="58" fill="#29343C">b<tspan baseline-shift="sub" font-size="32">t</tspan> = $100.95</text>
+    <text x="475" y="467" font-size="29" fill="#657078">highest current buy price</text>
+
+    <line x1="748" y1="362" x2="852" y2="362" stroke="#AEB7BE" stroke-width="1.5"/>
+    <line x1="748" y1="354" x2="748" y2="370" stroke="#AEB7BE" stroke-width="1.5"/>
+    <line x1="852" y1="354" x2="852" y2="370" stroke="#AEB7BE" stroke-width="1.5"/>
+    <text x="800" y="414" font-size="38" fill="#48555F">$0.10</text>
+    <text x="800" y="456" font-size="27" fill="#657078">spread</text>
+
+    <text x="1125" y="347" font-size="27" letter-spacing="2" fill="#247BA5">BEST ASK</text>
+    <text x="1125" y="420" font-size="58" fill="#29343C">a<tspan baseline-shift="sub" font-size="32">t</tspan> = $101.05</text>
+    <text x="1125" y="467" font-size="29" fill="#657078">lowest current sell price</text>
+
+    <!-- Execution statements align with their corresponding quote columns. -->
+    <line x1="260" y1="524" x2="690" y2="524" stroke="#DBDFE3" stroke-width="1.5"/>
+    <text x="475" y="573" font-size="33" fill="#29343C">Market sell</text>
+    <text x="475" y="613" font-size="29" fill="#657078">executes at the bid.</text>
+
+    <line x1="910" y1="524" x2="1340" y2="524" stroke="#DBDFE3" stroke-width="1.5"/>
+    <text x="1125" y="573" font-size="33" fill="#29343C">Market buy</text>
+    <text x="1125" y="613" font-size="29" fill="#657078">executes at the ask.</text>
+
+    <text x="800" y="704" font-size="26" fill="#737C84">Assume enough size is available at each displayed quote; fees and slippage are omitted.</text>
+  </g>
+</svg>

@@ -1,0 +1,502 @@
+% L6a student companion deck.
+%
+% The frame order mirrors the lecture notebook so students can take notes while
+% the instructor works through the notebook. The disclaimer is intentionally
+% slide 2, by instructor preference.
+\documentclass[aspectratio=169,11pt]{beamer}
+\usepackage{vnslides}
+
+\newcommand{\Pmeasure}{\mathbb{P}}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\Var}{\operatorname{Var}}
+\newcommand{\Cov}{\operatorname{Cov}}
+\newcommand{\SR}{\operatorname{SR}}
+\newcommand{\gbar}{\bar g}
+\newcommand{\bA}{\mathbf{A}}
+\newcommand{\bC}{\mathbf{C}}
+\newcommand{\bZ}{\mathbf{Z}}
+\newcommand{\bw}{\mathbf{w}}
+\newcommand{\bg}{\mathbf{g}}
+\newcommand{\bone}{\mathbf{1}}
+\newcommand{\Sig}{\boldsymbol{\Sigma}_{g}}
+\newcommand{\Sg}{\hat{\boldsymbol{\Sigma}}_{g}}
+\newcommand{\Ch}{\hat{\mathbf{C}}}
+\newcommand{\Tan}{\mathcal{T}}
+
+\title{\texorpdfstring{{\vnheavy L6a}}{L6a}: Data-Driven Minimum-Variance Portfolios}
+\subtitle{CHEME 5660 Cornell University}
+\author{Copyright Jeffrey Varner 2026. All Rights Reserved}
+
+\begin{document}
+
+\vntitlepage
+
+\begin{frame}{Disclaimer and Risks}
+  \vspace{0.6em}
+  \textbf{\ink{Training only.}} This content is for training and informational
+  purposes only. The teaching team does not make, give, or endorse any offer or
+  solicitation to buy or sell securities or derivative products, or provide
+  investment or trading advice or strategy.
+
+  \vspace{1.1em}
+  \textbf{\ink{Risk.}} Trading involves risk and is generally not recommended for
+  those with limited resources, experience, or a low risk tolerance. Past
+  performance does not guarantee future success.
+
+  \vspace{1.1em}
+  \textbf{\ink{Responsibility.}} You are responsible for your investment decisions
+  based on your financial circumstances, objectives, risk tolerance, and
+  liquidity needs.
+\end{frame}
+
+\begin{frame}{Objectives for Today}
+  By the end of this lecture, you should be able to:
+
+  \vspace{0.4em}
+  \begin{itemize}\setlength{\itemsep}{0.6em}
+    \item \hilite{Formulate portfolio reward and risk}: derive matrix expressions
+      for expected growth and variance, and explain diversification through covariance.
+    \item \hilite{Construct minimum-variance portfolios}: compute GMV weights
+      allowing shorts, identify the efficient frontier, and explain how long-only
+      constraints, exact growth targets, and growth floors affect the solution.
+    \item \hilite{Evaluate estimated allocations}: identify which estimated inputs
+      each allocation depends on, and evaluate the resulting investment using
+      wealth and NPV on prices reserved for testing.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Lectures and Examples}
+  \textbf{\ink{Lecture:}}
+  \href{https://github.com/varnerlab/CHEME-5660-CourseRepository-Fall-2026/blob/main/lectures/week-6/L6a/CHEME-5660-L6a-Lecture-MAGBM-Data-Portfolios-Fall-2026.ipynb}{Data-Driven Minimum-Variance Portfolios}
+
+  \vspace{0.7em}
+  \textbf{\ink{Example 1:}}
+  \href{https://github.com/varnerlab/CHEME-5660-CourseRepository-Fall-2026/blob/main/lectures/week-6/L6a/CHEME-5660-L6a-Example-Dirichlet-PortfolioWeights-Fall-2026.ipynb}{Portfolio Weights and Dirichlet Sampling}
+
+  Draw long-only allocations, compare their estimated growth and risk, and
+  follow selected buy-and-hold portfolios.
+
+  \vspace{0.7em}
+  \textbf{\ink{Example 2:}}
+  \href{https://github.com/varnerlab/CHEME-5660-CourseRepository-Fall-2026/blob/main/lectures/week-6/L6a/CHEME-5660-L6a-Example-Data-MinVar-Portfolio-Fall-2026.ipynb}{Minimum-Variance Portfolios from Data}
+
+  Estimate inputs from 2014--2024 data and trace the frontier. Compare both GMV
+  portfolios, equal weights, and an index fund using 2025 prices.
+
+  \vspace{0.7em}
+  \textbf{\ink{Example 3:}}
+  \href{https://github.com/varnerlab/CHEME-5660-CourseRepository-Fall-2026/blob/main/lectures/week-6/L6a/CHEME-5660-L6a-Example-MAGBM-Portfolio-Fall-2026.ipynb}{Portfolio Wealth with Multiple Asset GBM}
+
+  Simulate correlated prices and buy-and-hold wealth, then estimate the
+  probability of exceeding a target scaled NPV.
+\end{frame}
+
+% ==== concept review =========================================
+\begin{frame}{Concept Review: Portfolio Weights}
+  How much of our money should we put into each asset? For $M$ assets,
+  $w_i$ is the fraction of initial wealth invested in asset $i$:
+  \[
+    \underbrace{\bw=[w_1,\ldots,w_M]^{\top}}_{\text{mix of assets}},
+    \qquad
+    \underbrace{w_i\ge0}_{\text{long only}},
+    \qquad
+    \underbrace{\sum_{i=1}^{M}w_i=1}_{\text{fully invested}}.
+  \]
+
+  These constraints define the \hilite{allocation simplex}:
+  \begin{itemize}\setlength{\itemsep}{0.6em}
+    \item Two assets give a line segment, and three assets give a triangle.
+    \item Each corner invests the entire budget in one asset. Equal weights
+      lie at the center.
+    \item With initial wealth $W_0>0$, invest $w_iW_0$ dollars in asset $i$.
+      Holding the purchased shares fixed allows the weights to change with prices.
+  \end{itemize}
+
+  \vspace{0.5em}
+  We first sample feasible allocations, then develop an optimization problem
+  to choose the weights.
+\end{frame}
+
+\begin{frame}{Concept Review: Dirichlet Sampling}
+  The \href{https://en.wikipedia.org/wiki/Dirichlet_distribution}{Dirichlet distribution}
+  generates fully invested, long-only allocations.
+  Draw $\bw\sim\operatorname{Dirichlet}(\boldsymbol{\alpha})$, with
+  dimensionless $\alpha_i>0$ and $\alpha_0=\sum_i\alpha_i$.
+  Each weight has:
+  \[
+    \boxed{\E[w_i]=\frac{\alpha_i}{\alpha_0}},
+    \qquad
+    \boxed{\Var(w_i)=\frac{\alpha_i(\alpha_0-\alpha_i)}
+      {\alpha_0^2(\alpha_0+1)}}.
+  \]
+  \begin{itemize}\setlength{\itemsep}{0.35em}
+    \item The ratios $\alpha_i/\alpha_0$ set the expected weights. Larger
+      $\alpha_0$ at fixed ratios reduces their spread across draws.
+    \item With equal $\alpha_i=\alpha$: $\alpha<1$ favors the boundary,
+      $\alpha=1$ samples uniformly, and large $\alpha$ clusters draws near equal weights.
+  \end{itemize}
+
+  Finding the minimum variance over all feasible weights requires optimization.
+  \slidenote{Example 1:}{\href{https://github.com/varnerlab/CHEME-5660-CourseRepository-Fall-2026/blob/main/lectures/week-6/L6a/CHEME-5660-L6a-Example-Dirichlet-PortfolioWeights-Fall-2026.ipynb}{Portfolio Weights and Dirichlet Sampling}}
+\end{frame}
+
+% ==== company profile ========================================
+\begin{frame}{Company Profile: AllianceBernstein}
+  \href{https://www.alliancebernstein.com/corporate/en/home/about-us.html}{AllianceBernstein}
+  manages investments for institutional and individual clients.
+
+  \vspace{0.4em}
+  \begin{itemize}\setlength{\itemsep}{0.5em}
+    \item \hilite{Investment management}: equity, fixed-income, and multi-asset
+      strategies, supported by quantitative research and data science.
+    \item \hilite{Managing risk}: the
+      \href{https://www.alliancebernstein.com/us/en-us/investments/products/etf/equities/ab-international-low-volatility-equity-etf.html}{AB International Low Volatility Equity ETF}
+      combines quantitative and fundamental research, emphasizing risk mitigation.
+    \item \hilite{Artificial intelligence}:
+      \href{https://www.linkedin.com/in/andrewchin17/}{Andrew Chin}, Chief Artificial
+      Intelligence Officer and Cornell alumnus, leads the firm's AI strategy.
+      I know Andrew through the
+      \href{https://ecornell.cornell.edu/certificates/ai/ai-in-finance/}{AI in Finance short course}.
+  \end{itemize}
+
+  \vspace{0.5em}
+  Today's connection: how should we choose portfolio weights to balance
+  expected growth and risk?
+  \slidenote{Explore:}{\href{https://www.alliancebernstein.com/corporate/en/careers/students.html}{Student opportunities}
+    \quad\href{https://cornell-keynotes.simplecast.com/episodes/ai-in-finance-a-partner-not-a-replacement-uylbuylr-MfXqBdm4}{Cornell Keynotes conversation with Andrew Chin}}
+\end{frame}
+
+% ==== MPT ====================================================
+\begin{frame}{Modern Portfolio Theory: Portfolio Reward}
+  For $M$ risky assets, $w_i$ is the initial fraction invested in asset $i$,
+  with $\sum_iw_i=1$. Hold the weights fixed when calculating reward and risk.
+  Let $\bg=[g_1,\ldots,g_M]^{\top}$ contain the asset growth rates over
+  one observation interval. Their weighted average is:
+  \[
+    g_p=\sum_{i=1}^{M}w_i g_i=\bw^{\top}\bg.
+  \]
+
+  With fixed weights, \hilite{reward} is:
+  \[
+    \boxed{\E[g_p]=\sum_{i=1}^{M}w_i\E[g_i]
+      =\bw^{\top}\E[\bg]\approx\bw^{\top}\bg'}.
+  \]
+  We estimate expected growth using the sample-mean vector $\bg'$
+  (year$^{-1}$).
+
+  \vspace{0.5em}
+  Expected growth is linear in the portfolio weights.
+\end{frame}
+
+\begin{frame}{Modern Portfolio Theory: Portfolio Risk}
+  We measure \hilite{risk} by $\Var(g_p)$. With fixed weights and
+  covariance matrix $\Sig=\Cov(\bg)$:
+  \[
+    \boxed{
+    \begin{aligned}
+      \Var(g_p)
+        &=\Cov\!\left(\sum_iw_i g_i,\sum_jw_j g_j\right)\\[0.3em]
+        &=\sum_i\sum_jw_iw_j\Cov(g_i,g_j)
+        =\bw^{\top}\Sig\bw.
+    \end{aligned}}
+  \]
+  Individual variances (diagonal entries) and pairwise covariances
+  (off-diagonal entries) both contribute to risk. From data, use $\Sg$.
+
+  \vspace{0.5em}
+  Variance has units year$^{-2}$. Its square root,
+  $\sigma_{g,p}=\sqrt{\Var(g_p)}$, is the growth-rate standard deviation
+  (year$^{-1}$).
+
+  \vspace{0.5em}
+  To see how covariance can reduce risk, consider a two-asset portfolio.
+\end{frame}
+
+\begin{frame}{Two-Asset Diversification}
+  Invest fractions $w$ and $1-w$, with $0<w<1$, in two assets with positive
+  standard deviations $\sigma_{g,1}$ and $\sigma_{g,2}$ and correlation $\rho_{12}$:
+  \[
+    \Var(g_p)=w^2\sigma_{g,1}^2+(1-w)^2\sigma_{g,2}^2
+      +2w(1-w)\underbrace{\rho_{12}\sigma_{g,1}\sigma_{g,2}}_{\Cov(g_1,g_2)}.
+  \]
+
+  Correlation determines what mixing achieves:
+  \begin{itemize}\setlength{\itemsep}{0.3em}
+    \item At $\rho_{12}=1$, $\sigma_{g,p}=w\sigma_{g,1}+(1-w)\sigma_{g,2}$ is the weighted average.
+    \item For $\rho_{12}<1$, it falls below that weighted average.
+    \item If $\sigma_{g,1}\leq\sigma_{g,2}$ and $\rho_{12}<\sigma_{g,1}/\sigma_{g,2}$,
+      some mix has less variance than either asset.
+  \end{itemize}
+\end{frame}
+
+% ==== minimum-variance portfolios ============================
+\begin{frame}{The Global Minimum-Variance Portfolio}
+  The \hilite{global minimum-variance (GMV) portfolio} has the smallest
+  growth-rate variance among fully invested portfolios. With shorts allowed,
+  some weights can be negative. For $M$ risky assets with positive-definite
+  covariance $\Sig$ and vector of ones $\bone$, solve:
+  \[
+    \boxed{
+    \begin{aligned}
+      \underset{\bw\in\mathbb R^M}{\text{minimize}}\quad
+        &\tfrac12\bw^{\top}\Sig\bw
+        &&\quad\text{minimize growth-rate variance}\\
+      \text{subject to}\quad &\bone^{\top}\bw=1
+        &&\quad\text{weights sum to one}.
+    \end{aligned}}
+  \]
+  The unique GMV weights and minimum variance are:
+  \[
+    \boxed{\bw_{\mathrm{GMV}}
+      =\frac{\Sig^{-1}\bone}{\bone^{\top}\Sig^{-1}\bone},
+      \qquad \sigma^2_{g,\mathrm{GMV}}
+      =\frac{1}{\bone^{\top}\Sig^{-1}\bone}.}
+  \]
+  No mean-growth estimate is needed because there is no growth target.
+\end{frame}
+
+\begin{frame}{Deriving the GMV Weights}
+  Introduce a multiplier $\lambda$ for the budget constraint. The factor
+  $1/2$ simplifies the derivative without changing the minimizing weights:
+  \[
+    \mathcal L(\bw,\lambda)=\tfrac12\bw^{\top}\Sig\bw
+      -\lambda(\bone^{\top}\bw-1).
+  \]
+
+  \begin{itemize}\setlength{\itemsep}{0.3em}
+    \item \textbf{Stationarity:}
+      $\Sig\bw-\lambda\bone=\mathbf0$, so
+      $\bw=\lambda\Sig^{-1}\bone$.
+    \item \textbf{Budget:}
+      $1=\lambda\bone^{\top}\Sig^{-1}\bone$, giving
+      $\lambda=(\bone^{\top}\Sig^{-1}\bone)^{-1}$.
+    \item \textbf{Variance:} use $\Sig\bw=\lambda\bone$ and
+      $\bw^{\top}\bone=1$:
+      \[
+        \sigma^2_{g,\mathrm{GMV}}
+          =\bw^{\top}\Sig\bw
+          =\lambda\bw^{\top}\bone
+          =\lambda
+          =\frac{1}{\bone^{\top}\Sig^{-1}\bone}.
+      \]
+  \end{itemize}
+
+  Positive definiteness makes the objective strictly convex, so these
+  weights give the unique minimum.
+  \slidenote{Derivation:}{\href{https://github.com/varnerlab/CHEME-5660-CourseRepository-Fall-2026/blob/main/lectures/week-6/L6a/advanced/gmv-derivation/CHEME-5660-L6a-Derivation-GMV-Fall-2026.ipynb}{Complete GMV derivation companion}}
+\end{frame}
+
+\begin{frame}{What Does a Negative Weight Mean?}
+  For two assets with $\sigma_{g,1}\leq\sigma_{g,2}$, the GMV portfolio shorts
+  the riskier asset when:
+  \[
+    \rho_{12}>\frac{\sigma_{g,1}}{\sigma_{g,2}}.
+  \]
+  With 1,000 USD and weights $w_1=1.2$ and $w_2=-0.2$:
+  \begin{itemize}\setlength{\itemsep}{0.5em}
+    \item Borrow and sell 200 USD of asset 2, then buy 1,200 USD of asset 1.
+    \item We must repurchase the borrowed shares, so the short gains when the
+      price of the borrowed shares falls and loses when the price rises.
+  \end{itemize}
+
+  \vspace{0.5em}
+  We ignore borrowing fees, collateral, and position limits.
+\end{frame}
+
+\begin{frame}{The Minimum-Variance Frontier}
+  Unlike the long-only samples in Example 1, we now allow short positions:
+
+  \begin{columns}[c]
+    \begin{column}{0.55\textwidth}
+      \includegraphics[width=\textwidth]{../figs/minimum-variance-frontier/frontier.pdf}
+    \end{column}
+    \begin{column}{0.43\textwidth}
+      \begin{itemize}\setlength{\itemsep}{0.45em}
+        \item The curve gives the smallest variance at each growth rate.
+          Every feasible portfolio lies on or to its right.
+        \item $p_1$ has higher growth than $p_3$ at the same risk, so $p_3$
+          and the lower branch are dominated.
+        \item The upper branch, starting at the GMV portfolio $p_2$, is the
+          \hilite{efficient frontier}.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+  \slidenote{Efficient:}{No feasible portfolio offers at least as much growth
+    and no more variance, with a strict improvement in either.}
+\end{frame}
+
+\begin{frame}{The Target-Growth Problem}
+  How do we calculate the minimum-variance frontier? Given sample means
+  $\bg'$ and a target $g_\star$ (year$^{-1}$) for estimated expected growth,
+  solve:
+  \[
+    \boxed{
+    \begin{aligned}
+      \underset{\bw\in\mathbb R^M}{\text{minimize}}\quad
+        &\bw^{\top}\Sig\bw
+        &&\quad\text{minimize growth-rate variance}\\
+      \text{subject to}\quad &(\bg')^{\top}\bw=g_\star
+        &&\quad\text{meet the exact growth target}\\
+        &\bone^{\top}\bw=1
+        &&\quad\text{weights sum to one}.
+    \end{aligned}}
+  \]
+  Short positions are allowed, and $\Sig$ is positive definite.
+
+  \vspace{0.4em}
+  The sample means must not all be equal, since otherwise every portfolio
+  has the same estimated expected growth.
+\end{frame}
+
+\begin{frame}{Optimal Weights at an Exact Growth Target}
+  For $(\bg')^{\top}\bw=g_\star$ with short positions allowed, define:
+  \[
+    \begin{aligned}
+      a&=\bone^{\top}\Sig^{-1}\bone,
+        & b&=\bone^{\top}\Sig^{-1}\bg',\\[0.3em]
+      c&=(\bg')^{\top}\Sig^{-1}\bg',
+        & d&=ac-b^2>0.
+    \end{aligned}
+  \]
+  The unique minimizing weights are:
+  \[
+    \boxed{\bw_\star(g_\star)
+      =\frac{c-bg_\star}{d}\,\Sig^{-1}\bone
+      +\frac{ag_\star-b}{d}\,\Sig^{-1}\bg'.}
+  \]
+  These weights sum to one and meet the growth target exactly.
+
+  \vspace{0.4em}
+  When $g_\star=b/a$, the second term vanishes and we recover the GMV
+  weights, $\bw_{\mathrm{GMV}}=\Sig^{-1}\bone/a$.
+  \slidenote{Derivation:}{\href{https://github.com/varnerlab/CHEME-5660-CourseRepository-Fall-2026/blob/main/lectures/week-6/L6a/advanced/target-growth-derivation/CHEME-5660-L6a-Derivation-TargetGrowth-Fall-2026.ipynb}{Complete target-growth derivation companion}}
+\end{frame}
+
+\begin{frame}{Minimum Variance at a Growth Target}
+  Using the same coefficients, the smallest variance at target $g_\star$,
+  in year$^{-2}$, is:
+  \[
+    \boxed{\sigma_g^2(g_\star)
+      =\frac{a g_\star^2-2b g_\star+c}{d}
+      =\underbrace{\frac1a}_{\text{GMV variance}}
+      +\underbrace{\frac{a}{d}\left(g_\star-\frac ba\right)^2}_{\text{extra variance for the target}}.}
+  \]
+  Here, $b/a$ is the expected growth rate of the GMV portfolio $p_2$. Varying
+  $g_\star$ traces the \hilite{minimum-variance frontier}, and $g_\star\ge b/a$
+  gives the efficient frontier.
+\end{frame}
+
+\begin{frame}{The Long-Only Problem}
+  Many investors and funds cannot take short positions, and a growth
+  requirement is usually a minimum. With sample means $\bg'$, estimated
+  covariance $\Sg$, and growth floor $g_\star$, solve:
+  \[
+    \boxed{
+    \begin{aligned}
+      \underset{\bw\in\mathbb R^M}{\text{minimize}}\quad
+        &\bw^{\top}\Sg\bw
+        &&\quad\text{minimize estimated variance}\\
+      \text{subject to}\quad
+        &(\bg')^{\top}\bw\ge g_\star
+        &&\quad\text{meet or exceed the floor}\\
+        &\bone^{\top}\bw=1
+        &&\quad\text{weights sum to one}\\
+        &0\le w_i\le1,\quad i=1,\ldots,M
+        &&\quad\text{exclude short positions}.
+    \end{aligned}}
+  \]
+  Positive definiteness makes the solution unique. If the short-allowed GMV
+  weights are feasible, they stay optimal. Otherwise, we solve numerically.
+\end{frame}
+
+\begin{frame}{The Growth Floor}
+  The effect of $g_\star$ depends on the estimated expected growth of the
+  \hilite{long-only GMV portfolio}, found without a growth constraint:
+  \begin{itemize}\setlength{\itemsep}{0.45em}
+    \item \textbf{At or below it:} the long-only GMV portfolio meets the
+      floor and stays optimal.
+    \item \textbf{Above it:} a feasible floor binds, so the optimal portfolio
+      meets the target exactly. Raising the floor traces the efficient frontier,
+      never the dominated branch. Growth averages the sample means,
+      so $\max_i g_i'$ is the highest feasible floor.
+    \item \textbf{Compared with shorts allowed:} with the same inputs, the
+      long-only frontier lies on or to the right of the short-allowed frontier.
+      The two touch where the short-allowed weights are nonnegative.
+  \end{itemize}
+
+  The data example solves both problems and traces the long-only frontier.
+  \slidenote{Example 2:}{\href{https://github.com/varnerlab/CHEME-5660-CourseRepository-Fall-2026/blob/main/lectures/week-6/L6a/CHEME-5660-L6a-Example-Data-MinVar-Portfolio-Fall-2026.ipynb}{Minimum-Variance Portfolios from Data}}
+\end{frame}
+
+% ==== estimated inputs and portfolio performance ===============
+\begin{frame}{Estimated Inputs}
+  The GMV weights use only the estimated covariance $\Sg$. A growth target or
+  floor also uses the mean growth rates $\bg'$, which are harder to pin down:
+  \begin{itemize}\setlength{\itemsep}{0.8em}
+    \item For AMD (2014--2024), the sample mean gives $0.3120$ per year, while
+      L4b's log-price regression gives $0.4397$ per year.
+    \item The optimizer treats its inputs as exact, so it favors asset
+      combinations whose variance is underestimated or whose mean growth is
+      overestimated.
+  \end{itemize}
+
+  \vspace{0.5em}
+  We therefore evaluate allocations on prices that were not used to choose them.
+\end{frame}
+
+\begin{frame}{Portfolio Wealth and Scaled NPV}
+  Buy $n_i=w_iW_0/S_i(0)$ shares, with $w_i\ge0$ and $\sum_iw_i=1$, and hold
+  them fixed. For a sale after $T$ years at constant benchmark growth rate $g_y$:
+  \[
+    \boxed{
+    \begin{aligned}
+      W_t&=W_0\sum_{i=1}^{M}w_i\frac{S_i(t)}{S_i(0)}
+        &&\quad\text{portfolio value in dollars}\\[0.2em]
+      \rho_T&=\frac{\operatorname{NPV}(g_y,T)}{W_0}=\frac{W_T}{W_0}e^{-g_yT}-1
+        &&\quad\text{discounted gain per dollar invested}.
+    \end{aligned}}
+  \]
+  The sign of $\rho_T$ shows whether the investment beats or trails the
+  benchmark. We allow fractional shares and omit dividends and trading costs.
+
+  \vspace{0.4em}
+  Example 2 applies $W_t$ to the held-out 2025 prices. Example 3 simulates
+  wealth with the fitted model to estimate $\Pmeasure(\rho_T>\rho_\star)$.
+  \slidenote{Example 3:}{\href{https://github.com/varnerlab/CHEME-5660-CourseRepository-Fall-2026/blob/main/lectures/week-6/L6a/CHEME-5660-L6a-Example-MAGBM-Portfolio-Fall-2026.ipynb}{Portfolio Wealth with Multiple Asset GBM}}
+\end{frame}
+
+% ==== optional advanced material =============================
+\begin{frame}{Optional Advanced Material}
+  This example develops the frontier geometry further.
+
+  \vspace{0.8em}
+  \textbf{\ink{Advanced:}}
+  \href{https://github.com/varnerlab/CHEME-5660-CourseRepository-Fall-2026/blob/main/lectures/week-6/L6a/advanced/frontier-geometry/CHEME-5660-L6a-Advanced-FrontierGeometry-Fall-2026.ipynb}{Frontier Geometry and the Two-Fund Theorem}
+
+  How can two risky frontier portfolios generate the rest of the curve?
+  Derive the weights and vary the mix of two fixed funds. Compare the
+  frontier with a 50\% limit on each position's magnitude and with long-only
+  weights.
+\end{frame}
+
+\begin{frame}{Summary}
+  \begin{itemize}\setlength{\itemsep}{1.0em}
+    \item \hilite{Portfolio reward and risk}: we expressed expected growth and
+      variance using asset growth rates and portfolio weights. Covariance
+      determines how combining assets changes risk and creates diversification.
+    \item \hilite{Minimum-variance portfolios}: we obtained the GMV weights and
+      identified the efficient frontier. With long-only constraints, sweeping a
+      growth floor returns the long-only GMV portfolio and the efficient frontier.
+    \item \hilite{Estimated inputs and realized performance}: we connected the
+      estimated inputs to the weights and evaluated wealth and NPV on prices
+      reserved for testing. An allocation optimized on historical estimates
+      need not perform best.
+  \end{itemize}
+  \vspace{0.7em}
+  In L6b, we use a single index model to estimate the inputs and add a
+  risk-free asset.
+\end{frame}
+
+\transitionframe{Next: model asset growth using a shared market factor and firm-specific risk.}
+
+\end{document}

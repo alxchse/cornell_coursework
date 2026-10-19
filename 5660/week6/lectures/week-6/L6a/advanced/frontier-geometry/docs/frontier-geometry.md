@@ -1,0 +1,56 @@
+# Frontier calculations
+
+These helpers are defined in [src/FrontierGeometry.jl](../src/FrontierGeometry.jl)
+and loaded by [Include.jl](../Include.jl). Task 1 of the
+[frontier-geometry notebook](../CHEME-5660-L6a-Advanced-FrontierGeometry-Fall-2026.ipynb)
+derives the formulas and constructs their inputs.
+
+## frontier_weights
+
+```julia
+frontier_weights(g_target::Float64, parameters::NamedTuple)
+```
+
+The target `g_target` is an expected growth rate in inverse years. The named tuple
+contains the two vectors `x = Σ̂ \ ones(M)` and `y = Σ̂ \ g′`, followed by the four
+coefficients `a = sum(x)`, `b = sum(y)`, `c = dot(g′, y)`, and `d = a*c-b^2`.
+The covariance `Σ̂` has units of inverse years squared, and the sample-mean vector
+`g′` (`ĝ` in the notebook) has units of inverse years. All fields must come from the same inputs and asset
+order. The covariance is positive definite, the sample means are not all equal, and
+`d > 0`. Task 1 checks this condition once before sweeping over targets.
+
+Returns a `Vector{Float64}` of dimensionless minimum-variance weights. The weights
+sum to one and meet the equality growth target up to floating-point roundoff.
+Negative weights are allowed. The helper reuses the supplied vectors and
+coefficients instead of repeating the matrix solves.
+
+## frontier_variance
+
+```julia
+frontier_variance(g_target::Float64, parameters::NamedTuple)
+```
+
+Uses the same target, coefficients, and assumptions as `frontier_weights`.
+Returns the `Float64` minimum variance in inverse years squared, computed as
+`(a*g_target^2 - 2*b*g_target + c)/d`. Its square root is the standard deviation
+plotted on the frontier's risk axis. The formula covers both the efficient frontier and the dominated branch.
+
+## solve_frontier_point
+
+```julia
+solve_frontier_point(g_target::Float64, mean_growth::Vector{Float64},
+    covariance::Matrix{Float64}; lower::Float64 = -Inf, upper::Float64 = Inf)
+```
+
+Builds the fully invested, equality-target variance-minimization problem in JuMP
+and solves it with MadNLP. The target and sample-mean vector have units of inverse years.
+The positive-definite covariance has units of inverse years squared and the same
+asset order. Each portfolio weight lies between the dimensionless `lower` and
+`upper` bounds. The defaults allow unrestricted weights. Bounds `0.0` and `1.0`
+give the long-only problem used in Task 3.
+
+Returns a `Vector{Float64}` of dimensionless weights when JuMP reports a solved,
+feasible model, or `nothing` otherwise. An infeasible target is one possible
+reason for `nothing`. Budget, growth, and bound constraints hold to solver
+tolerance. The caller supplies finite, dimensionally consistent inputs.
+Infinite weight bounds are allowed.

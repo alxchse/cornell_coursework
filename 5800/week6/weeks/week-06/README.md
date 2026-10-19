@@ -1,0 +1,59 @@
+# Week 6 — Flux balance analysis and iterative linear solvers
+
+Week 6 applies the linear programs of week 5 to metabolism and then turns to
+iterative methods for linear systems. Flux balance analysis encodes a metabolic
+network as a stoichiometric matrix, requires every metabolite to balance at steady
+state, and maximizes a biological objective subject to flux bounds. Stationary
+iterations then solve linear systems through repeated local updates.
+
+| Meeting | Topic | Notebooks |
+|---|---|---|
+| L6a | Flux balance analysis | [Lecture](L6a/CHEME-5800-L6a-Lecture-FluxBalanceAnalysis-Fall-2026.ipynb) · [Advanced derivation](L6a/CHEME-5800-L6a-Advanced-Derivation-FluxBalanceAnalysis-Fall-2026.ipynb) · [HL-60 urea-cycle example](L6a/CHEME-5800-L6a-Example-UreaCycle-FluxBalance-Fall-2026.ipynb) |
+| L6b | Overflow metabolism in *E. coli* | [Lab](L6b/CHEME-5800-L6b-Lab-OverflowMetabolism-Fall-2026.ipynb) |
+| L6c | Jacobi, Gauss–Seidel, SOR, and convergence | [Lecture](L6c/CHEME-5800-L6c-Lecture-GeneralIterativeMethod-Fall-2026.ipynb) · [Iterative-solvers example](L6c/CHEME-5800-L6c-Example-FunWithIterativeSolvers-Fall-2026.ipynb) |
+| L6d | Dimensionless oxygen diffusion and reaction | [Lab](L6d/CHEME-5800-L6d-Lab-IterativeLinearSolvers-Fall-2026.ipynb) · [PDE-to-matrix derivation](L6d/CHEME-5800-L6d-Derivation-OxygenDiffusionReaction-Fall-2026.ipynb) |
+
+The flux balance material is adapted from the CHEME 5430/5450 Spring 2026 lecture
+([varnerlab/Lecture-5430-FluxBalanceAnalysis](https://github.com/varnerlab/Lecture-5430-FluxBalanceAnalysis)).
+L6a's code is in `L6a/src/`, loaded by `L6a/Include.jl`.
+
+## L6c supporting material
+
+The L6c notebook set has been reviewed and updated for 2026. The lecture and
+example are linked above; companion notes develop each algorithm and the
+convergence condition:
+
+- [Jacobi method](L6c/CHEME-5800-L6c-Algorithm-JacobiMethod-Fall-2026.ipynb)
+- [Gauss–Seidel method](L6c/CHEME-5800-L6c-Algorithm-GaussSeidel-Fall-2026.ipynb)
+- [Successive over-relaxation](L6c/CHEME-5800-L6c-Algorithm-SOR-Fall-2026.ipynb)
+- [Spectral-radius convergence derivation](L6c/CHEME-5800-L6c-Advanced-Convergence-IterativeMethods-Fall-2026.ipynb)
+
+The notebooks are the course materials; HTML exports are not maintained for 2026.
+The executed example uses the shared course environment through
+[Include.jl](L6c/Include.jl).
+
+## Lab implementations and reference solutions
+
+L6b is walked through in class, so its [Compute.jl](L6b/src/Compute.jl) ships
+complete and matches [Compute-solution.jl](L6b/src/Compute-solution.jl) apart from
+its header. Rebuilding `solve_growth(...)` from its docstring is an optional
+exercise. The lab's model, `L6b/data/e_coli_core.json`, is the BiGG *E. coli* core
+model (Orth et al. 2010).
+
+L6d models oxygen delivery in a square tissue slice using the Thiele modulus and
+prescribed edge concentrations. Its [derivation](L6d/CHEME-5800-L6d-Derivation-OxygenDiffusionReaction-Fall-2026.ipynb)
+connects the dimensional material balance to the dimensionless PDE and the
+five-point linear system. Students implement the Jacobi method as
+`my_jacobi(...)` in [Compute.jl](L6d/src/Compute.jl) and check its iterate
+archive against the course solver from L6c; Gauss-Seidel and SOR come from the
+course package. The stub's three TODOs follow the L6c Jacobi pseudocode, and
+[Compute-solution.jl](L6d/src/Compute-solution.jl) is the completed reference.
+The lab also includes a short notebook exercise on a change in edge supply.
+
+Validate from the repository root:
+
+```bash
+julia --startup-file=no --project=. instructor/validation/week-06/runtests.jl
+```
+
+The stoichiometric-matrix SVD example is now in week 7 (L7b).
