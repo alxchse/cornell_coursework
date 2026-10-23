@@ -97,27 +97,27 @@ function my_perceptron(X::Array{Float64,2}, y::Array{Float64,1};
         for i ∈ 1:number_of_examples
             x̂ = X[i,:]; # the augmented features of example i: row i of X, as a vector
 
-            # TODO 1: the mistake test. Replace false with the L9a test for a mistake,
+            # the mistake test. Replace false with the L9a test for a mistake,
             # yᵢ x̂ᵢᵀθ ≤ 0. In this code, yᵢ is y[i] and x̂ᵢ is x̂.
             # Hint: dot(x̂, θ) computes x̂ᵀθ, and ≤ can also be typed as <=.
-            if false
+            if (y[i] * dot(x̂, θ) ≤ 0)
 
-                # TODO 2: the update. Replace the right-hand side, θ, with the L9a
+                # the update. Replace the right-hand side, θ, with the L9a
                 # update θ + yᵢ x̂ᵢ, which moves the score of example i toward the
                 # correct sign. Hint: * multiplies a vector by a number, and + adds two
                 # vectors entry by entry.
-                θ = θ;
+                θ = θ + y[i] * x̂; # update the parameters to reduce the mistake
                 number_of_mistakes += 1; # count the mistake; this line is complete
             end
         end
 
         # Step 3 of L9a, t ← t + 1, is done by the for loop: t already counts this pass.
 
-        # TODO 3: the stopping test, step 4 of L9a. Replace false with a test that is
+        # the stopping test, step 4 of L9a. Replace false with a test that is
         # true when this pass made at most M mistakes or t has reached T. The mistakes
         # in this pass are in number_of_mistakes.
         # Hint: a || b is true when a or b is true.
-        if false
+        if (number_of_mistakes <= M || t == T)
             return (θ = θ, passes = t, mistakes = number_of_mistakes); # this line is complete
         end
     end
