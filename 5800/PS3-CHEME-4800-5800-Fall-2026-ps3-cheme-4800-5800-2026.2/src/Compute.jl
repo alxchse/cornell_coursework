@@ -35,12 +35,11 @@ because its uptake-positive exchange carries a negative flux during export.
 """
 function protein_objective(model)
 
-    # TODO 1: Build and return the objective vector.
-
     # Use the number of columns in model.S for its length and model.protein
     # for the nonzero entry; the tests also use smaller, reordered networks.
-
-    error("Complete protein_objective in src/Compute.jl");
+    c = zeros(Float64, size(model.S, 2)) # declare a new vector of zeros with the same length as the number of columns in model.S
+    c[model.protein] = 1.0 # set the entry at model.protein to 1.0
+    return c
 end
 
 
@@ -88,21 +87,40 @@ Throw `ArgumentError` for a negative or nonfinite budget (`Inf`, `-Inf`, or
 """
 function allocation_constraints(model, budget::Real; strategy::Symbol=:equal)
 
-    # TODO 2: Build and return the named tuple (lower, upper, A, b).
-
-    # Validate inputs, then copy the original bounds -
-    # Check the budget and strategy before changing the copied arrays.
+    if !isfinite(budget) || budget < 0 # check if the budget is finite and nonnegative
+        throw(ArgumentError("budget must be finite and nonnegative"))
+    end
+    if !(strategy in (:equal, :optimized)) # check if the strategy is either :equal or :optimized
+        throw(ArgumentError("strategy must be :equal or :optimized"))
+    end
 
     # Apply the selected allocation rule -
     # For :equal, change only the supply upper bounds using the actual number
     # of supply columns. For :optimized, build the single shared-budget row.
+    # For :optimized, keep the original bounds and add one row to A and b.
+    # The row sums the supply columns and limits them to the budget.
 
-    # Return the bounds and extra constraints -
-    # Use the array dimensions specified in the docstring.
+    lower = copy(model.lower) # copy the lower bounds from the model
+    upper = copy(model.upper) # copy the upper bounds from the model
+    n = size(model.S, 2) # get the number of columns in model.S
 
-    error("Complete allocation_constraints in src/Compute.jl");
+    if strategy == :equal 
+        K = length(model.amino_acid_uptake) # get the number of supply columns
+        for col in model.amino_acid_uptake # iterate over each supply column index
+            upper[col] = min(upper[col], budget / K) # set the upper bound to the minimum of the og upper bound and budget/cols
+        end
+        A = zeros(Float64, 0, n) # create an empty matrix with 0 rows and n columns for A
+        b = Float64[] # create an empty vector for b
+    end
+
+    if strategy == :optimized
+        A = zeros(Float64, 1, n) # create a matrix with 1 row and n columns for A
+        A[1, model.amino_acid_uptake] .= 1.0 # set the entries in the supply columns to 1.0
+        b = Float64[budget] # create a vector with one entry equal to the budget for b
+    end
+
+    return (lower=lower, upper=upper, A=A, b=b)
 end
-
 
 # ----------------------------------------------------------------------------
 # Part 2: Compare production across supply budgets
@@ -155,23 +173,47 @@ reading a flux or objective value.
 """
 function production_curve(model, budgets::AbstractVector{<:Real})
 
-    # TODO 3: Return one production row per input budget.
+    for budget in budgets # iterate over each budget in the input vector
+        if !isfinite(budget) || budget < 0 # check if the budget is finite and nonnegative
+            throw(ArgumentError("budget must be finite and nonnegative"))
+        end
+    end
 
-    # Initialize -
-    # Validate the budgets and build the protein objective.
+    isempty(budgets) && return NamedTuple[] # return an empty vector of named tuples if the input vector is empty
 
-    # Solve both allocations at each budget -
-    # At each budget, start :equal and :optimized from the original model bounds.
-    # Use build(...) with the field mapping in the Method section, then call
-    # solve(calculation; A=limits.A, b=limits.b). Check the status before reading
-    # result["argmax"][model.protein]; multiply by 1000 to convert mM/h to μM/h.
+    c = protein_objective(model) # get the protein objective vector
+    production_rows = Vector{NamedTuple}(undef, length(budgets)) # create a vector of named tuples to hold the results
 
-    # Return the production curve -
-    # Collect (budget, equal, optimized) rows in the original input order.
+    for (i, budget) in enumerate(budgets) # iterate over each budget with its index
+        strategy_production = Dict{Symbol,Float64}() # create a dictionary to hold the production values for each strategy
 
-    error("Complete production_curve in src/Compute.jl");
+        for strategy in (:equal, :optimized) # iterate over each strategy
+            limits = allocation_constraints(model, budget; strategy=strategy) # get the allocation constraints for the current budget and strategy
+            calculation = build(MyPrimalFluxBalanceAnalysisCalculationModel, (
+                S=model.S,
+                fluxbounds=hcat(limits.lower, limits.upper),
+                objective=c,
+                species=model.metabolites,
+                reactions=model.reactions,
+            ))
+
+            result = solve(calculation; A=limits.A, b=limits.b) # solve the optimization problem with the current constraints
+            status = result["termination_status"] # get the termination status of the solver
+            status == JuMP.MOI.OPTIMAL || # check if the solver status is optimal otherwise throw error
+                throw(ErrorException("$strategy allocation solve failed for budget $budget with status $status"))
+
+            strategy_production[strategy] = 1000 * result["argmax"][model.protein] # convert the protein flux to μM/h and store it in the dictionary
+        end
+
+        production_rows[i] = ( # create a named tuple for the current budget and its production values
+            budget=budget,
+            equal=strategy_production[:equal],
+            optimized=strategy_production[:optimized],
+        )
+    end
+
+    return production_rows
 end
-
 
 # ----------------------------------------------------------------------------
 # Advanced (Part 3, optional): Find the range of each supply flux
@@ -233,24 +275,70 @@ reading its objective value.
 """
 function supply_ranges(model, budget::Real; strategy::Symbol=:equal, fraction::Real=1.0)
 
-    # TODO 4: Return one (column, minimum, maximum) named tuple per supply column.
+    if !isfinite(budget) || budget < 0 # check if the budget is finite and nonnegative
+        throw(ArgumentError("budget must be finite and nonnegative"))
+    end
+    if !(strategy in (:equal, :optimized)) # check if the strategy is either :equal or :optimized
+        throw(ArgumentError("strategy must be :equal or :optimized"))
+    end
+    if !isfinite(fraction) || fraction < 0 || fraction > 1 # check if the fraction is finite and between 0 and 1
+        throw(ArgumentError("fraction must be finite and between 0 and 1"))
+    end
 
-    # Find the maximum protein rate -
-    # Check the fraction, build the strategy's limits, and solve once for the
-    # maximum protein output z in mM/h.
+    limits = allocation_constraints(model, budget; strategy=strategy) # get the allocation constraints for the current budget and strategy
+    c = protein_objective(model) # get the protein objective vector
 
-    # Set the protein-output requirement -
-    # Append -c' and -fraction*z to A and b;
-    # this is the protein lower bound written in the solver's <= form.
+    fluxbounds = hcat(limits.lower, limits.upper) # create a matrix of flux bounds by concatenating the lower and upper bounds horizontally
+    calculation = build(MyPrimalFluxBalanceAnalysisCalculationModel, (
+        S=model.S,
+        fluxbounds=fluxbounds,
+        objective=c,
+        species=model.metabolites,
+        reactions=model.reactions,
+    ))
 
-    # Find the endpoints for each supply -
-    # Keep that requirement while changing objectives for each supply column j.
-    # Maximize v[j] for the maximum; maximize -v[j] and negate the objective
-    # for the minimum. Require result["termination_status"] == JuMP.MOI.OPTIMAL
-    # after every solve, before reading the objective value.
+    result = solve(calculation; A=limits.A, b=limits.b) # solve the optimization problem with the current constraints
+    status = result["termination_status"] # get the termination status of the solver
+    status == JuMP.MOI.OPTIMAL || # check if the solver status is optimal otherwise throw error
+        throw(ErrorException("Protein solve failed for budget $budget, strategy $strategy with status $status"))
 
-    # Return the supply ranges -
-    # Collect (column=j, minimum=lo, maximum=hi) rows in mM/h.
+    z = result["objective_value"] # get the maximum protein output value from the result
+    A_required = vcat(limits.A, -c') # create a new matrix by vertically concatenating the original A matrix and the negative transpose of the protein objective vector
+    b_required = vcat(Float64.(limits.b), -fraction * z) # create a new vector by vertically concatenating the original b vector and the negative product of fraction and z
 
-    error("Complete supply_ranges in src/Compute.jl");
+    ranges = Vector{NamedTuple}(undef, length(model.amino_acid_uptake)) # create a vector of named tuples to hold the ranges for each supply column
+
+    # For each supply column, solve twice to find the minimum and maximum flux values
+    for (i, column) in enumerate(model.amino_acid_uptake)
+        maximum_objective = zeros(Float64, size(model.S, 2)) # create a new vector of zeros with the same length as the number of columns in model.S for the maximum objective
+        maximum_objective[column] = 1.0 # set the entry at the current supply column index to 1.0 for the maximum objective
+        calculation.objective = maximum_objective # set the calculation's objective to the maximum objective vector
+
+        maximum_result = solve(calculation; A=A_required, b=b_required) # solve the optimization problem with the current constraints for the maximum supply
+        maximum_status = maximum_result["termination_status"] # get the termination status of the solver for the maximum supply
+        maximum_status == JuMP.MOI.OPTIMAL || # check if the solver status is optimal otherwise throw error
+            throw(ErrorException("Maximum supply solve failed for budget $budget, strategy $strategy with status $maximum_status"))
+        maximum_supply = maximum_result["objective_value"] # get the maximum supply value from the result
+
+        minimum_objective = zeros(Float64, size(model.S, 2)) # create a new vector of zeros with the same length as the number of columns in model.S for the minimum objective
+        minimum_objective[column] = -1.0 # set the entry at the current supply column index to -1.0 for the minimum objective
+        calculation.objective = minimum_objective # set the calculation's objective to the minimum objective vector
+
+        minimum_result = solve(calculation; A=A_required, b=b_required) # solve the optimization problem with the current constraints for the minimum supply
+        minimum_status = minimum_result["termination_status"] # get the termination status of the solver for the minimum supply
+        minimum_status == JuMP.MOI.OPTIMAL || # check if the solver status is optimal otherwise throw error
+            throw(ErrorException("Minimum supply solve failed for budget $budget, strategy $strategy with status $minimum_status"))
+        minimum_supply = -minimum_result["objective_value"] # get the minimum supply value from the result and negate it since we minimized the negative
+
+        # Store the results in the ranges vector as a named tuple with the current supply column index, minimum supply, and maximum supply
+        ranges[i] = (
+            column=column,
+            minimum=minimum_supply,
+            maximum=maximum_supply,
+        )
+    end
+
+    # restore the original protein objective vector to the calculation model
+    calculation.objective = c
+    return ranges
 end
