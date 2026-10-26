@@ -9,11 +9,12 @@ support your explanations, and include units with numerical values.
 1. **Does sharing the amino-acid budget improve protein production?**
    At a total budget of 1.0 mM/h, report the production rate for each strategy
    from `production-versus-budget.csv`. Under equal allocation, each amino acid
-   can use at most 0.05 mM/h; under optimized allocation, the 20 amino acids share
-   the total budget. Does either strategy produce more protein at this budget?
+   can use at most 0.05 mM/h; under optimized allocation, the 20 amino acids share the total budget. Does either strategy produce more protein at this budget?
    Explain your result in terms of how the two strategies limit amino-acid supply.
 
-   TODO: Write your response.
+   Equal - 6.0035 microM/h
+   Optimized - 7.4432 microM/h
+   Optimized is higher by about 1.44 microM/h, roughly 24% more. This is due to the fact that
 
 2. **Why does protein production stop increasing as the budget grows?**
    Use `production-versus-budget.png` to estimate the production rate at which

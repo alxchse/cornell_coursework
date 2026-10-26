@@ -1,0 +1,21 @@
+PS3 CHEME 4800/5800 Fall 2026 submission manifest
+Generated: 2026-10-24T10:01:47.270
+Track checked: advanced
+testme_part_1.jl: all tests passed
+testme_part_2.jl: all tests passed
+testme_part_3.jl: all tests passed
+Outputs: plot and data tables generated
+Discussion: Question 1 still has a placeholder; Question 2 still has a placeholder
+Required work: WORK NEEDS ATTENTION
+Advanced: WORK NEEDS ATTENTION
+Advanced outputs: plot and data tables generated
+Advanced discussion: Question 3 still has a placeholder
+2ea66b5d25f86ebdabd59c9f5947af245d7b4a10192e0664bfbb0db17128dc26  Include.jl
+d21f85ea38166303ce58e06134b5cc4a5c900c409ab2a500ff7c9225109a09bb  TRACK.txt
+dc87179e394a27563075083231734c00ede724d8f01d139d7cd29630e8124c61  responses.md
+a4b0572d0ee8550e858e60b279e07fa2a48bc8ac4a8297d682ad32dc2798e704  src/Compute.jl
+0ac49712460a1582ee858d8d370487d988d414130325cc38917c13509bd33add  src/Factory.jl
+eddceffb478a37291001752be52eeed97bf83994ab996721f770c199636a6aca  src/Model.jl
+c3bc486102a0c2f7eeab367e58c576580c267970f3154b5f59a199e3841d8dcb  src/Reporting.jl
+c6fa4d83420cec2be058017a977c7addfe63f2b2eb10cd62055550a697b96d41  src/Solver.jl
+a7194ee7c98dfaf05ed5fbf5bf5f5e99ae48b34b9c00c2a3d113d66a2e39534e  src/Types.jl
